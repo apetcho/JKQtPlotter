@@ -1148,11 +1148,13 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          */
         template <typename TContainer, typename TContainerMask>
         size_t addCopiedColumnMasked(const TContainer& data, const TContainerMask& mask, const QString& name=QString(""), bool useIfMaskEquals=false) {
-            const size_t N=static_cast<size_t>(data.size());
+            auto itmask=std::begin(mask);
+            auto itmaskend=std::end(mask);
+            auto itdata=std::begin(data);
+            auto itdataend=std::end(data);
+            const size_t N=std::max<size_t>(std::distance(itmask,itmaskend),std::distance(itdata,itdataend));
             double* d=static_cast<double*>(malloc(static_cast<size_t>(N)*sizeof(double)));
             size_t rrs=0;
-            auto itmask=mask.begin();
-            auto itdata=data.begin();
             for (size_t r=0; r<N; r++) {
                 if (static_cast<bool>(*itmask)==useIfMaskEquals) {
                     d[rrs]=jkqtp_todouble(*itdata);
