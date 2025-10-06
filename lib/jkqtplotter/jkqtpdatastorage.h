@@ -907,7 +907,7 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          */
         template <typename TContainer>
         size_t addCopiedColumn(const TContainer& data, const QString& name=QString("")) {
-            return addCopiedColumn(data.begin(), data.end(), name);
+            return addCopiedColumn(std::begin(data), std::end(data), name);
         }
 
         /** \brief add one external column to the datastore. It will be filled with the contents of vector \a data.
@@ -2729,7 +2729,9 @@ void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos) {
         if (!ok) {
             QVector<double> old_data;
             for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
-
+            if (pos+1!=pos.getColumn()->end()) {
+                for (auto it=pos+1; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
+            }
 
             size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
             columns[itc].replaceMemory(itemID, 0);
@@ -2746,8 +2748,11 @@ void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos) {
         auto itc=columns.key(*pos.getColumn());
         if (!ok) {
             QVector<double> old_data;
+            old_data.reserve(pos.getColumn()->getRows()+10);
             for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
-
+            if (pos+1!=pos.getColumn()->end()) {
+              for (auto it=pos+1; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
+            }
 
             size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
             columns[itc].replaceMemory(itemID, 0);
@@ -2853,7 +2858,7 @@ size_t JKQTPDatastore::addCopiedImageAsColumnTranspose(const T* data, size_t wid
     }
 
     size_t idx=addInternalColumn(temp, width*height, name);
-    columns[idx].setImageColumns(height);
+    columns[idx].setImageColumns(width);
     return idx;
 }
 
