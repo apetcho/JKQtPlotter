@@ -223,6 +223,20 @@ JKQTPDatastoreItem::JKQTPDatastoreItem(const QVector<double>& data_)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
+JKQTPDatastoreItem::JKQTPDatastoreItem(QVector<double>&& data_)
+{
+    this->storageType=StorageType::Internal;
+    this->allocated=false;
+    this->dataformat=JKQTPDatastoreItemFormat::SingleColumn;
+    this->storageType=StorageType::Vector;
+    this->datavec=std::forward<QVector<double>>(data_);
+    this->data=this->datavec.data();
+    this->columns=1;
+    this->rows=static_cast<int>(this->datavec.size());
+    this->allocated=true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
 bool JKQTPDatastoreItem::resizeColumns(size_t new_rows) {
     bool dataRetained=false;
     if (storageType==StorageType::Internal && allocated && data!=nullptr) {
@@ -1043,6 +1057,91 @@ int JKQTPDatastore::getNextHigherIndex(int column, size_t row, int start, int en
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos) {
+    if (pos.isValid()) {
+        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
+        auto itc=columns.key(*pos.getColumn());
+        if (!ok) {
+            QVector<double> old_data;
+            auto NRows=pos.getColumn()->getRows();
+            old_data.reserve(NRows+10);
+            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
+            auto secondpos=pos;
+            ++secondpos;
+            if (secondpos!=pos.getColumn()->end()) {
+                for (auto it=secondpos; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
+            }
+
+            size_t itemID=addItem(new JKQTPDatastoreItem(std::move(old_data)));
+            columns[itc].replaceMemory(itemID, 0);
+        } else {
+            columns[itc].erase(static_cast<size_t>(pos.getPosition()));
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos) {
+    if (pos.isValid()) {
+        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
+        auto itc=columns.key(*pos.getColumn());
+        if (!ok) {
+            QVector<double> old_data;
+            old_data.reserve(pos.getColumn()->getRows()+10);
+            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
+            auto secondpos=pos;
+            secondpos++;
+            if (secondpos!=pos.getColumn()->end()) {
+                for (auto it=secondpos; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
+            }
+
+            size_t itemID=addItem(new JKQTPDatastoreItem(std::move(old_data)));
+            columns[itc].replaceMemory(itemID, 0);
+        } else {
+            columns[itc].erase(static_cast<size_t>(pos.getPosition()));
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos, const JKQTPColumnIterator &posEnd) {
+    if (pos.isValid()) {
+        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
+        auto itc=columns.key(*pos.getColumn());
+        if (!ok) {
+            QVector<double> old_data;
+            old_data.reserve(pos.getColumn()->getRows()+10);
+            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
+            for (auto it=posEnd+1; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
+
+            size_t itemID=addItem(new JKQTPDatastoreItem(std::move(old_data)));
+            columns[itc].replaceMemory(itemID, 0);
+            return;
+        }
+        if (posEnd.isValid()) columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
+        else columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos, const JKQTPColumnConstIterator &posEnd) {
+    if (pos.isValid()) {
+        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
+        auto itc=columns.key(*pos.getColumn());
+        if (!ok) {
+            QVector<double> old_data;
+            old_data.reserve(pos.getColumn()->getRows()+10);
+            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
+            for (auto it=posEnd+1; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
+
+            size_t itemID=addItem(new JKQTPDatastoreItem(std::move(old_data)));
+            columns[itc].replaceMemory(itemID, 0);
+        }
+        if (posEnd.isValid()) columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
+        else columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
+    }
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////

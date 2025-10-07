@@ -401,28 +401,28 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          *
          *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
          */
-        inline void eraseFromColumn(const JKQTPColumnIterator &pos);
+        void eraseFromColumn(const JKQTPColumnIterator &pos);
         /** \brief removes the entry \a pos
          *
          *  \warning If the memory was externally managed before, it will be internally managed afterwards
          *
          *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
          */
-        inline void eraseFromColumn(const JKQTPColumnConstIterator &pos);
+        void eraseFromColumn(const JKQTPColumnConstIterator &pos);
         /** \brief removes the entries \a pos to \a posEnd
          *
          *  \warning If the memory was externally managed before, it will be internally managed afterwards
          *
          *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
          */
-        inline void eraseFromColumn(const JKQTPColumnConstIterator &pos, const JKQTPColumnConstIterator &posEnd);
+        void eraseFromColumn(const JKQTPColumnConstIterator &pos, const JKQTPColumnConstIterator &posEnd);
         /** \brief removes the entries \a pos to \a posEnd
          *
          *  \warning If the memory was externally managed before, it will be internally managed afterwards
          *
          *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
          */
-        inline void eraseFromColumn(const JKQTPColumnIterator &pos, const JKQTPColumnIterator &posEnd);
+        void eraseFromColumn(const JKQTPColumnIterator &pos, const JKQTPColumnIterator &posEnd);
 
 
         /** \brief returns a back-inserter iterator (JKQTPColumnBackInserter) to the \a i -th column in the JKQTPDatastore \see JKQTPColumnBackInserter */
@@ -2330,6 +2330,8 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
     JKQTPDatastoreItem(size_t columns, size_t rows);
     /** \brief class constructor: initializes the object for internal data storage with the given data */
     JKQTPDatastoreItem(const QVector<double> &data);
+    /** \brief class constructor: initializes the object for internal data storage with the given data */
+    JKQTPDatastoreItem(QVector<double> &&data);
     /** \brief class constructor: initializes the object for external data storage */
     JKQTPDatastoreItem(JKQTPDatastoreItemFormat dataformat, double* data, size_t columns, size_t rows);
     /** \brief class constructor: initializes the object for external data storage */
@@ -2723,78 +2725,6 @@ inline void JKQTPDatastore::appendToColumn(size_t column, TIterator first, TIter
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
-            if (pos+1!=pos.getColumn()->end()) {
-                for (auto it=pos+1; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
-            }
-
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        } else {
-            columns[itc].erase(static_cast<size_t>(pos.getPosition()));
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            old_data.reserve(pos.getColumn()->getRows()+10);
-            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
-            if (pos+1!=pos.getColumn()->end()) {
-              for (auto it=pos+1; it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
-            }
-
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        } else {
-            columns[itc].erase(static_cast<size_t>(pos.getPosition()));
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos, const JKQTPColumnIterator &posEnd) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        }
-        if (posEnd.isValid()) columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
-        else columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos, const JKQTPColumnConstIterator &posEnd) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        }
-        if (posEnd.isValid()) columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
-        else columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 inline double JKQTPDatastore::getPixel(size_t column, size_t x, size_t y) const {

@@ -63,6 +63,12 @@ private slots:
         size_t col2 = ds.addCopiedColumn(vf.begin(), vf.end(), QString("iter"));
         QCOMPARE(ds.getRows(col2), static_cast<size_t>(vf.size()));
         for (size_t i = 0; i < ds.getRows(col2); ++i) QCOMPARE(ds.get(col2, static_cast<int>(i)), jkqtp_todouble(vf[i]));
+
+        // pointer-based
+        size_t col3 = ds.addCopiedColumn(v.data(), v.size(), QString("pntr"));
+        QCOMPARE(ds.getRows(col), static_cast<size_t>(v.size()));
+        for (size_t i = 0; i < ds.getRows(col3); ++i) QCOMPARE(ds.get(col3, static_cast<int>(i)), v[i]);
+
     }
 
     void test_addImageColumn_and_pixel_accessors() {
@@ -113,7 +119,7 @@ private slots:
     }
 
     // eraseFromColumn: vector-backed vs internal-backed behavior
-    void test_eraseFromColumn_vector_and_internal_backing() {
+    void test_eraseFromColumn_vector() {
         JKQTPDatastore ds;
         // vector-backed (addCopiedColumn -> internal vector)
         std::vector<double> v = { 1, 2, 3, 4, 5 };
@@ -122,11 +128,17 @@ private slots:
         auto it = ds.begin(static_cast<int>(col));
         it += 1;
         ds.eraseFromColumn(it);
+
         QCOMPARE(ds.getRows(col), static_cast<size_t>(4));
         QCOMPARE(ds.get(col, 0), 1.0);
         QCOMPARE(ds.get(col, 1), 3.0);
+        QCOMPARE(ds.get(col, 2), 4.0);
         QCOMPARE(ds.get(col, 3), 5.0);
+    }
 
+    // eraseFromColumn: vector-backed vs internal-backed behavior
+    void test_eraseFromColumn_internal_backing() {
+        JKQTPDatastore ds;
         // internal-backed (addInternalColumn) -> eraseFromColumn should convert to vector-backed and erase
         const size_t N = 4;
         double* data = static_cast<double*>(malloc(sizeof(double) * N));
@@ -139,6 +151,33 @@ private slots:
         ds.eraseFromColumn(it2);
         QCOMPARE(ds.getRows(icol), N - 1);
         QCOMPARE(ds.get(icol, 0), 10.0);
+        QCOMPARE(ds.get(icol, 1), 11.0);
+        QCOMPARE(ds.get(icol, 2), 13.0);
+    }
+
+    // eraseFromColumn: vector-backed vs internal-backed behavior
+    void test_eraseFromColumn_range_internal_backing() {
+        JKQTPDatastore ds;
+        // internal-backed (addInternalColumn) -> eraseFromColumn should convert to vector-backed and erase
+        const size_t N = 10;
+        double* data = static_cast<double*>(malloc(sizeof(double) * N));
+        QVERIFY(data != nullptr);
+        for (size_t i=0;i<N;i++) data[i] = 10.0 + double(i);
+        size_t icol = ds.addInternalColumn(data, N, QString("internal_backed"));
+        QCOMPARE(ds.getRows(icol), N);
+        auto it2 = ds.begin(static_cast<int>(icol));
+        it2 += 2;
+        auto it3=it2;
+        it3 += 2;
+        ds.eraseFromColumn(it2, it3);
+
+        QVector<double> v2;
+        for (auto it2=ds.begin(icol); it2!=ds.end(icol); ++it2) v2.push_back(*it2);
+        QCOMPARE(ds.getRows(icol), N - 3);
+        QCOMPARE(ds.get(icol, 0), 10.0);
+        QCOMPARE(ds.get(icol, 1), 11.0);
+        QCOMPARE(ds.get(icol, 2), 15.0);
+        QCOMPARE(ds.get(icol, 3), 16.0);
     }
 
     // erase ranges
@@ -148,11 +187,13 @@ private slots:
         size_t col = ds.addCopiedColumn(v, QString("r"));
         auto itstart = ds.begin(static_cast<int>(col));
         itstart += 2;
-        auto itend = ds.begin(static_cast<int>(col));
-        itend += 5;
+        auto itend = itstart;
+        itend += 2;
         ds.eraseFromColumn(itstart, itend);
         // removed elements at positions 2,3,4 => remaining 0,1,5,6
         QCOMPARE(ds.getRows(col), static_cast<size_t>(4));
+        QCOMPARE(ds.get(col, 0), 0.0);
+        QCOMPARE(ds.get(col, 1), 1.0);
         QCOMPARE(ds.get(col, 2), 5.0);
         QCOMPARE(ds.get(col, 3), 6.0);
     }
