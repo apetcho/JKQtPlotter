@@ -122,14 +122,14 @@ private slots:
     void test_eraseFromColumn_vector() {
         JKQTPDatastore ds;
         // vector-backed (addCopiedColumn -> internal vector)
-        std::vector<double> v = { 1, 2, 3, 4, 5 };
+        const std::vector<double> v = { 1, 2, 3, 4, 5 };
         size_t col = ds.addCopiedColumn(v, QString("v"));
         QCOMPARE(ds.getRows(col), static_cast<size_t>(5));
         auto it = ds.begin(static_cast<int>(col));
         it += 1;
         ds.eraseFromColumn(it);
 
-        QCOMPARE(ds.getRows(col), static_cast<size_t>(4));
+        QCOMPARE(ds.getRows(col), v.size()-1);
         QCOMPARE(ds.get(col, 0), 1.0);
         QCOMPARE(ds.get(col, 1), 3.0);
         QCOMPARE(ds.get(col, 2), 4.0);

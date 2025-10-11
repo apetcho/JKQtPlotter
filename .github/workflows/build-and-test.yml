@@ -64,6 +64,14 @@ jobs:
             fetch_content: false
             generator: Visual Studio 17 2022
 
+          - os: windows-2022
+            qt_ver: 6.7
+            compiler: msvc
+            build_type: Release
+            cxx20: ON
+            fetch_content: false
+            generator: Visual Studio 17 2022
+
           # macOS
           #- os: macos-15
           #  qt_ver: 6.7
