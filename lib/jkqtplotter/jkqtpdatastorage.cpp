@@ -195,13 +195,22 @@ JKQTPDatastoreItem::JKQTPDatastoreItem(size_t columns, size_t rows){
     this->allocated=false;
     if (columns>1) {
         this->dataformat=JKQTPDatastoreItemFormat::MatrixRow;
-        this->data=static_cast<double*>(calloc(columns*rows, sizeof(double)));
+        if (rows>0) {
+            this->data=static_cast<double*>(calloc(columns*rows, sizeof(double)));
+        } else {
+            this->data=nullptr;
+        }
     } else {
         this->dataformat=JKQTPDatastoreItemFormat::SingleColumn;
         this->storageType=StorageType::Vector;
-        datavec.resize(static_cast<int>(columns*rows));
-        std::fill(datavec.begin(), datavec.end(), 0.0);
+        if (rows>0) {
+            datavec.resize(static_cast<int>(columns*rows));
+            std::fill(datavec.begin(), datavec.end(), 0.0);
+        } else {
+            datavec.reserve(10);
+        }
         this->data=datavec.data();
+
     }
     this->columns=columns;
     this->rows=rows;
@@ -219,6 +228,20 @@ JKQTPDatastoreItem::JKQTPDatastoreItem(const QVector<double>& data_)
     this->data=datavec.data();
     this->columns=1;
     this->rows=static_cast<int>(data_.size());
+    this->allocated=true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+JKQTPDatastoreItem::JKQTPDatastoreItem(QVector<double>&& data_)
+{
+    this->storageType=StorageType::Internal;
+    this->allocated=false;
+    this->dataformat=JKQTPDatastoreItemFormat::SingleColumn;
+    this->storageType=StorageType::Vector;
+    this->datavec=std::forward<QVector<double>>(data_);
+    this->data=this->datavec.data();
+    this->columns=1;
+    this->rows=static_cast<int>(this->datavec.size());
     this->allocated=true;
 }
 
@@ -320,64 +343,51 @@ bool JKQTPDatastore::hasColumn(size_t i) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-JKQTPDatastore::ColumnIterator JKQTPDatastore::begin()
-{
-    return columns.begin();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-JKQTPDatastore::ColumnIterator JKQTPDatastore::end()
-{
-    return columns.end();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-JKQTPDatastore::ConstColumnIterator JKQTPDatastore::begin() const
-{
-    return columns.begin();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-JKQTPDatastore::ConstColumnIterator JKQTPDatastore::end() const
-{
-    return columns.end();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
 JKQTPColumnIterator JKQTPDatastore::begin(int i)
 {
-    if (i<0) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    auto it=columns.find(static_cast<size_t>(i));
-    if (it==columns.end()) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    else return it->begin();
+    JKQTPASSERT(i>=0);
+    return begin(static_cast<size_t>(i));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 JKQTPColumnIterator JKQTPDatastore::end(int i)
 {
-    if (i<0) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    auto it=columns.find(static_cast<size_t>(i));
-    if (it==columns.end()) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    else return it->end();
+    JKQTPASSERT(i>=0);
+    return end(static_cast<size_t>(i));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 JKQTPColumnConstIterator JKQTPDatastore::begin(int i) const
 {
-    if (i<0) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    auto it=columns.find(static_cast<size_t>(i));
-    if (it==columns.end()) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    else return it->begin();
+    JKQTPASSERT(i>=0);
+    return cbegin(static_cast<size_t>(i));
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 JKQTPColumnConstIterator JKQTPDatastore::end(int i) const
 {
-    if (i<0) return m_invalidColumn->end();
-    auto it=columns.find(static_cast<size_t>(i));
-    if (it==columns.end()) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
-    else return it->end();
+    JKQTPASSERT(i>=0);
+    return cend(static_cast<size_t>(i));
+
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+JKQTPColumnConstIterator JKQTPDatastore::cbegin(int i) const
+{
+    JKQTPASSERT(i>=0);
+    return cbegin(static_cast<size_t>(i));
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+JKQTPColumnConstIterator JKQTPDatastore::cend(int i) const
+{
+    JKQTPASSERT(i>=0);
+    return cend(static_cast<size_t>(i));
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 JKQTPColumnIterator JKQTPDatastore::begin(size_t i)
@@ -398,13 +408,25 @@ JKQTPColumnIterator JKQTPDatastore::end(size_t i)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 JKQTPColumnConstIterator JKQTPDatastore::begin(size_t i) const
 {
+    return cbegin(i);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+JKQTPColumnConstIterator JKQTPDatastore::end(size_t i) const
+{
+    return cend(i);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+JKQTPColumnConstIterator JKQTPDatastore::cbegin(size_t i) const
+{
     auto it=columns.find(i);
     if (it==columns.end()) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
     else return it->begin();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-JKQTPColumnConstIterator JKQTPDatastore::end(size_t i) const
+JKQTPColumnConstIterator JKQTPDatastore::cend(size_t i) const
 {
     auto it=columns.find(i);
     if (it==columns.end()) throw std::runtime_error("column "+std::to_string(i)+" does not exist in JKQTPDatastore");
@@ -577,7 +599,7 @@ size_t JKQTPDatastore::addItem(size_t columnsnum, size_t rows) {
     return addItem(new JKQTPDatastoreItem(columnsnum, rows));
 };
 
-/** \brief add one external column to the datastore. It contains \a rows rows.*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addItem(double* data, size_t rows) {
     /*items.push_back(new JKQTPDatastoreItem(JKQTPSingleColumn, data, 1, rows));
     return items.size()-1;*/
@@ -637,6 +659,13 @@ size_t JKQTPDatastore::addColumn(double* data, size_t rows, const QString& name)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addInternalColumn(double* data, size_t rows, const QString& name) {
     size_t it=addItem(new JKQTPDatastoreItem(JKQTPDatastoreItemFormat::SingleColumn, data, 1, rows,true));
+    return addColumnForItem(it, 0, name);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+size_t JKQTPDatastore::addInternalColumn(QVector<double> &&data, const QString &name)
+{
+    size_t it=addItem(new JKQTPDatastoreItem(std::move(data)));
     return addColumnForItem(it, 0, name);
 }
 
@@ -830,42 +859,37 @@ std::pair<size_t, size_t> JKQTPDatastore::addCopiedPoints(const QVector<QPointF>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addLinearColumn(size_t rows, double start, double end, const QString& name) {
-    double delta=(end-start)/static_cast<double>(rows-1);
-    JKQTPDatastoreItem* it=new JKQTPDatastoreItem(1, rows);
+    const double delta=(end-start)/static_cast<double>(rows-1);
+    QVector<double> d(rows);
     for (size_t i=0; i<rows; i++) {
-        it->set(0, i, start+static_cast<double>(i) * delta);
+        d[i]= start+static_cast<double>(i) * delta;
          //std::cout<<"copy@"<<i<<" = "<<data[i]<<std::endl;
     }
-    /*items.push_back(it);
-    size_t itemid=items.size()-1;*/
-    size_t itemid= addItem(it);
-    return addColumnForItem(itemid, 0, name);
+    return addInternalColumn(std::move(d),name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addLogColumn(size_t rows, double start, double end, const QString &name)
 {
-    JKQTPDatastoreItem* it=new JKQTPDatastoreItem(1, rows);
     const double x0=log(start)/JKQTPSTATISTICS_LN10;
     const double x1=log(end)/JKQTPSTATISTICS_LN10;
+    QVector<double> d(rows);
     for (size_t i=0; i<rows; i++) {
-        it->set(0, i, pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0)));
+        d[i]= pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0));
     }
-    size_t itemid= addItem(it);
-    return addColumnForItem(itemid, 0, name);
+    return addInternalColumn(std::move(d),name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addDecadeLogColumn(size_t rows, double startDecade, double endDecade, const QString &name)
 {
-    JKQTPDatastoreItem* it=new JKQTPDatastoreItem(1, rows);
     const double x0=startDecade;
     const double x1=endDecade;
+    QVector<double> d(rows);
     for (size_t i=0; i<rows; i++) {
-        it->set(0, i, pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0)));
+        d[i]= pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0));
     }
-    size_t itemid= addItem(it);
-    return addColumnForItem(itemid, 0, name);
+    return addInternalColumn(std::move(d),name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -955,8 +979,9 @@ size_t JKQTPDatastore::addCalculatedColumnFromColumn(size_t otherColumnX, size_t
 ////////////////////////////////////////////////////////////////////////////////////////////////
 QVector<int> JKQTPDatastore::getColumnIDsIntVec() const {
     QVector<int> ks;
-    for (const size_t& k: columns.keys()) {
-        ks<<static_cast<int>(k);
+    const auto keys=columns.keys();
+    for (auto it=keys.begin(); it!=keys.end(); ++it) {
+        ks<<static_cast<int>(*it);
     }
     return ks;
 }
@@ -1043,6 +1068,58 @@ int JKQTPDatastore::getNextHigherIndex(int column, size_t row, int start, int en
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+void JKQTPDatastore::eraseFromColumn(JKQTPColumnConstIterator pos) {
+    eraseFromColumn(pos, pos);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+void JKQTPDatastore::eraseFromColumn(JKQTPColumnConstIterator pos, JKQTPColumnConstIterator posEnd) {
+    JKQTPASSERT_M(pos.getColumn()==posEnd.getColumn(), "in eraseFromColumn(pos,posEnd) both iterators have to point to the same column");
+    const auto itc=columns.key(*pos.getColumn());
+    auto& column=columns[itc];
+    if (pos.isValid() && (posEnd.isValid() || posEnd==column.end())) {
+        const size_t NRows=column.getRows();
+        size_t start1=0;
+        size_t end1=NRows-1;
+        size_t start2=NRows;
+        size_t end2=NRows;
+
+        if (pos==column.begin()) {
+            if (posEnd==column.end() || (posEnd.getPosition()==NRows-1)) {
+                // erase everything
+                const size_t itemID=addItem(new JKQTPDatastoreItem(1, 0));
+                column.replaceMemory(itemID);
+                return;
+            } else { // posEnd.isValid()==true and at least one row to copy
+                // copy posEnd+1 ... <end>
+                start1=(posEnd+1).getPosition();
+                end1=NRows-1;
+                start2=NRows; // disable copying a second range
+                end2=NRows;
+            }
+        } else {
+            if (posEnd==column.end() || (posEnd.getPosition()==NRows-1)) {
+                // copy 0..pos-1 only
+                start1=0;
+                end1=(pos-1).getPosition();
+                start2=NRows; // disable copying a second range
+                end2=NRows;
+            } else {
+                // copy 0..pos-1 and posEnd+1..<end>
+                start1=0;
+                end1=(pos-1).getPosition();
+                start2=(posEnd+1).getPosition(); // disable copying a second range
+                end2=NRows-1;
+            }
+        }
+        if (!column.convertVectorItemFromRanges(start1,end1,start2,end2)) {
+            if (posEnd.isValid()) column.eraseFromVectorColumn(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
+            else column.eraseFromVectorColumn(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
+        }
+    }
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1494,7 +1571,7 @@ void JKQTPDatastore::resizeColumn(size_t column, size_t new_rows)
             columns[column].setValue(static_cast<size_t>(i), old_data[i]);
         }
     }
-    columns[column].getDatastoreItem()->resize(new_rows);
+    columns[column].getDatastoreItem()->resizeVectorItem(new_rows);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1565,4 +1642,55 @@ size_t JKQTPDatastore::getColumnImageHeight(int column) const
 {
     if (column<0) return 0;
     return columns[static_cast<size_t>(column)].getRows()/columns[static_cast<size_t>(column)].getImageColumns();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+bool JKQTPColumn::convertVectorItem(size_t *usedVectorItem)
+{
+    return convertVectorItemFromRanges(getRows(),getRows(),getRows(),getRows(),usedVectorItem);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+bool JKQTPColumn::convertVectorItemFromRanges(size_t start1, size_t end1, size_t start2, size_t end2, size_t *usedVectorItem)
+{
+    bool itemCreated=false;
+    const bool isVectorCol=getDatastoreItem()->isVector();
+    if (!isVectorCol) {
+        const auto NRowsOld=getRows();
+        JKQTPDatastore* ds=getDatastore();
+        QVector<double> old_data;
+
+        const bool copyRange1=start1<=end1 && start1<NRowsOld && end1<NRowsOld;
+        const size_t NRowsRange1=end1-start1+1;
+        const bool copyRange2=start2<=end2 && start2<NRowsOld && end2<NRowsOld;
+        const size_t NRowsRange2=end2-start2+1;
+        const bool copyAll=(start1==NRowsOld && end1==NRowsOld && start2==NRowsOld && end2==NRowsOld);
+        const size_t NToCopy=copyAll?NRowsOld:(copyRange1?NRowsRange1:0)+(copyRange2?NRowsRange2:0)+10;
+
+        // copy all data into old_data, as specified by start1,end1,start2,end2
+        old_data.reserve(NToCopy);
+        if (copyAll) {
+            for (size_t it=0; it<NRowsOld; ++it) old_data.push_back(getValue(it));
+        } else {
+            if (copyRange1) {
+                for (size_t it=start1; it<=std::min(NRowsOld-1,end1); ++it) old_data.push_back(getValue(it));
+            }
+            if (copyRange2) {
+                for (size_t it=start2; it<=std::min(NRowsOld-1,end2); ++it) old_data.push_back(getValue(it));
+            }
+        }
+
+        // create new JKQTPDatastoreItem and add it to ds, replace memory in this column by that item
+        const size_t itemID=ds->addItem(new JKQTPDatastoreItem(std::move(old_data)));
+        replaceMemory(itemID, 0);
+        itemCreated=true;
+    }
+    if (usedVectorItem) *usedVectorItem=getDatastoreItemNum();
+    return itemCreated;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+bool JKQTPColumn::convertVectorItemFromRange(size_t start1, size_t end1, size_t *usedVectorItem)
+{
+    return convertVectorItemFromRanges(start1,end1, getRows(), getRows(), usedVectorItem);
 }

@@ -152,7 +152,7 @@ function(jkqtplotter_add_test TEST_NAME)
 
     # Installation
     install(TARGETS ${EXENAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    add_test(NAME ${TEST_NAME} COMMAND COMMAND $<TARGET_FILE:${EXENAME}>)
+    add_test(NAME ${TEST_NAME} COMMAND $<TARGET_FILE:${EXENAME}>)
 
     #Installation of Qt DLLs on Windows
     jkqtplotter_deployqt(${EXENAME})

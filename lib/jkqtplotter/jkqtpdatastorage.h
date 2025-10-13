@@ -164,8 +164,8 @@ enum class JKQTPDatastoreItemFormat {
   * \subsection jkqtpdatastore_column_management_iterators Iterator Interface
   *
   * In addition to teh fucntions above, JKQTPDatastore also provides C++-style iteratos to read the data from a column:
-  *   - begin()
-  *   - end()
+  *   - begin(), cbegin()
+  *   - end(), cend()
   * .
   *
   * ... and also a \c std::back_inserter -style interface to append data to columns:
@@ -360,13 +360,17 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
         typedef QMap<size_t, JKQTPColumn>::const_iterator ConstColumnIterator;
 
         /** \brief returns an iterator to the first column in the JKQTPDatastore \see ColumnIterator */
-        ColumnIterator begin();
+        ColumnIterator begin(){ return columns.begin(); }
         /** \brief returns an iterator behind the last column in the JKQTPDatastore \see ColumnIterator */
-        ColumnIterator end();
+        ColumnIterator end(){ return columns.end(); }
         /** \brief returns a const iterator to the first column in the JKQTPDatastore \see ConstColumnIterator */
-        ConstColumnIterator begin() const;
+        inline ConstColumnIterator begin() const { return columns.cbegin(); }
         /** \brief returns a const iterator behind the last column in the JKQTPDatastore \see ConstColumnIterator */
-        ConstColumnIterator end() const;
+        inline ConstColumnIterator end() const { return columns.cend(); }
+        /** \brief returns a const iterator to the first column in the JKQTPDatastore \see ConstColumnIterator */
+        ConstColumnIterator cbegin() const { return columns.cbegin(); }
+        /** \brief returns a const iterator behind the last column in the JKQTPDatastore \see ConstColumnIterator */
+        ConstColumnIterator cend() const { return columns.cend();}
     public:
 
         /** \brief class constructor, generates an empty datastore */
@@ -385,6 +389,10 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
         JKQTPColumnConstIterator begin(int i) const;
         /** \brief returns a const iterator behind the last data entry data in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::const_iterator */
         JKQTPColumnConstIterator end(int i) const;
+        /** \brief returns a const iterator to the first data entry in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::const_iterator */
+        JKQTPColumnConstIterator cbegin(int i) const;
+        /** \brief returns a const iterator behind the last data entry data in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::const_iterator */
+        JKQTPColumnConstIterator cend(int i) const;
 
         /** \brief returns an iterator to the first data entry in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::iterator */
         JKQTPColumnIterator begin(size_t i);
@@ -394,6 +402,10 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
         JKQTPColumnConstIterator begin(size_t i) const;
         /** \brief returns a const iterator behind the last data entry data in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::const_iterator */
         JKQTPColumnConstIterator end(size_t i) const;
+        /** \brief returns a const iterator to the first data entry in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::const_iterator */
+        JKQTPColumnConstIterator cbegin(size_t i) const;
+        /** \brief returns a const iterator behind the last data entry data in the \a i -th column in the JKQTPDatastore \see JKQTPColumn::const_iterator */
+        JKQTPColumnConstIterator cend(size_t i) const;
 
         /** \brief removes the entry \a pos
          *
@@ -401,28 +413,15 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          *
          *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
          */
-        inline void eraseFromColumn(const JKQTPColumnIterator &pos);
-        /** \brief removes the entry \a pos
-         *
-         *  \warning If the memory was externally managed before, it will be internally managed afterwards
-         *
-         *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
-         */
-        inline void eraseFromColumn(const JKQTPColumnConstIterator &pos);
+        void eraseFromColumn(JKQTPColumnConstIterator pos);
         /** \brief removes the entries \a pos to \a posEnd
          *
          *  \warning If the memory was externally managed before, it will be internally managed afterwards
          *
          *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
          */
-        inline void eraseFromColumn(const JKQTPColumnConstIterator &pos, const JKQTPColumnConstIterator &posEnd);
-        /** \brief removes the entries \a pos to \a posEnd
-         *
-         *  \warning If the memory was externally managed before, it will be internally managed afterwards
-         *
-         *  \warning the iterator \a pos is rendered invalid by this column, as the in some cases the internal column is redefined!
-         */
-        inline void eraseFromColumn(const JKQTPColumnIterator &pos, const JKQTPColumnIterator &posEnd);
+        void eraseFromColumn(JKQTPColumnConstIterator pos, JKQTPColumnConstIterator posEnd);
+
 
 
         /** \brief returns a back-inserter iterator (JKQTPColumnBackInserter) to the \a i -th column in the JKQTPDatastore \see JKQTPColumnBackInserter */
@@ -722,6 +721,7 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          *  \see \ref JKQTPlotterBasicJKQTPDatastore
          */
         size_t addColumn(double* data, size_t rows, const QString& name=QString(""));
+
         /** \brief add a column with \a rows entries from the array \a data,
          *         ownership of the memory behind \a data is transfered to the datastore
          *
@@ -743,6 +743,38 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          */
         size_t addInternalColumn(double *data, size_t rows, const QString& name);
 
+        /** \brief add a column with data from \a data,
+         *         ownership of the memory behind \a data is transfered to the datastore
+         *
+         *   \param data data array to be moved into the datastore
+         *   \param name name for the column
+         *   \return the ID of the newly created column
+         *
+         *  \see \ref JKQTPlotterBasicJKQTPDatastore
+         */
+        size_t addInternalColumn(QVector<double>&& data, const QString& name);
+
+        /** \brief add a column with data from \a data,
+         *         ownership of the memory behind \a data is transfered to the datastore
+         *
+         *   \param data data array to be moved into the datastore
+         *   \param name name for the column
+         *   \return the ID of the newly created column
+         *
+         *  \see \ref JKQTPlotterBasicJKQTPDatastore
+         */
+        inline size_t addColumn(QVector<double>&& data, const QString& name) { return addInternalColumn(std::move(data), name); }
+
+        /** \brief add a column with data from \a data,
+         *         ownership of the memory behind \a data is transfered to the datastore
+         *
+         *   \param data data array to be moved into the datastore
+         *   \param name name for the column
+         *   \return the ID of the newly created column
+         *
+         *  \see \ref JKQTPlotterBasicJKQTPDatastore
+         */
+        inline size_t addCopiedColumn(QVector<double>&& data, const QString& name) { return addInternalColumn(std::move(data), name); }
 
         /** \brief add a new columns with \a width * \a height rows to the datastore and return its column ID. The new item uses internal memory management.
          *         The column is meant to represent an image in row-major order with x-dimention \a width and y-dimension \a height .
@@ -907,7 +939,7 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          */
         template <typename TContainer>
         size_t addCopiedColumn(const TContainer& data, const QString& name=QString("")) {
-            return addCopiedColumn(data.begin(), data.end(), name);
+            return addCopiedColumn(std::begin(data), std::end(data), name);
         }
 
         /** \brief add one external column to the datastore. It will be filled with the contents of vector \a data.
@@ -1148,22 +1180,23 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          */
         template <typename TContainer, typename TContainerMask>
         size_t addCopiedColumnMasked(const TContainer& data, const TContainerMask& mask, const QString& name=QString(""), bool useIfMaskEquals=false) {
-            const size_t N=static_cast<size_t>(data.size());
-            double* d=static_cast<double*>(malloc(static_cast<size_t>(N)*sizeof(double)));
+            auto itmask=std::begin(mask);
+            auto itmaskend=std::end(mask);
+            auto itdata=std::begin(data);
+            auto itdataend=std::end(data);
+            const size_t N=std::min<size_t>(std::distance(itmask,itmaskend),std::distance(itdata,itdataend));
+            QVector<double> d;
+            d.reserve(N);
             size_t rrs=0;
-            if (data) {
-                auto itmask=mask.begin();
-                auto itdata=data.begin();
-                for (size_t r=0; r<N; r++) {
-                    if (static_cast<bool>(*itmask)==useIfMaskEquals) {
-                        d[rrs]=jkqtp_todouble(*itdata);
-                        rrs++;
-                    }
-                    ++itmask;
-                    ++itdata;
+            for (size_t r=0; r<N; r++) {
+                if (static_cast<bool>(*itmask)==useIfMaskEquals) {
+                    d.push_back(jkqtp_todouble(*itdata));
+                    rrs++;
                 }
+                ++itmask;
+                ++itdata;
             }
-            size_t col= addInternalColumn(d, rrs, name);
+            size_t col= addInternalColumn(std::move(d), name);
             return col;
 
         }
@@ -1195,16 +1228,15 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
        template <typename TIterator>
         std::pair<size_t, size_t> addCopiedMap(TIterator first, TIterator last, const QString& nameKey=QString("map_key"), const QString& nameValue=QString("map_value")) {
             const size_t N=static_cast<size_t>(std::abs(std::distance(first,last)));
-            double* xvals=static_cast<double*>(malloc(N*sizeof(double)));
-            double* yvals=static_cast<double*>(malloc(N*sizeof(double)));
+            QVector<double> xvals(N), yvals(N);
             size_t i=0;
             for (auto it=first; it!=last; ++it) {
                 xvals[i]=(jkqtp_todouble(it->first));
                 yvals[i]=(jkqtp_todouble(it->second));
                 i++;
             }
-            const size_t cx=addInternalColumn(xvals, N, nameKey);
-            const size_t cy=addInternalColumn(yvals, N, nameValue);
+            const size_t cx=addInternalColumn(std::move(xvals), nameKey);
+            const size_t cy=addInternalColumn(std::move(yvals), nameValue);
             return std::pair<size_t, size_t>(cx,cy);
         }
 
@@ -1666,14 +1698,63 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPColumn {
     protected:
       inline JKQTPDatastore* getDatastore() { return datastore; }
       inline const JKQTPDatastore* getDatastore() const { return datastore; }
+      /** \brief lets the column point to another datastore item with id \a datastoreItem_ (of type JKQTPDatastoreItem) in the owning JKQTPDataStore.
+       *         The column points to the \a datastoreOffset_ -th column within that JKQTPDatastoreItem . */
       inline void replaceMemory(size_t datastoreItem_=0, size_t datastoreOffset_=0) {
           datastoreItem=datastoreItem_;
           datastoreOffset=datastoreOffset_;
       }
-      /** \brief removes the entry \a row */
-      inline void erase(size_t row);
-      /** \brief removes the entries \a row to \a rowEnd */
-      inline void erase(size_t row, size_t rowEnd);
+      /** \brief removes the entry \a row
+       *
+       *  \warning this function throws an exception if the column is NOT a vector column (i.e. stored within an internal vector in the linked JKQTPDatastoreItem)!
+       */
+      inline void eraseFromVectorColumn(size_t row);
+      /** \brief removes the entries \a row to \a rowEnd (inclusive)
+       *
+       *  \warning this function throws an exception if the column is NOT a vector column (i.e. stored within an internal vector in the linked JKQTPDatastoreItem)!*/
+      inline void eraseFromVectorColumn(size_t row, size_t rowEnd);
+
+      /** \brief if the column's data is \u not stored in an internal vector item, this copies the data into a vector item
+         *       This does copies all data.
+         *
+         *  \param[out] usedVectorItem optionally returns the ID of the JKQTPDatastoreItem that was generated or is used!
+         *  \return \c true if a conversion was performed, or false if the column already linked to a vector item.
+         *          In the latter case the range [start1..end1] are ignored (i.e. a vector column is not modified!!!)!!!
+         *          Especially this returns \c false if isVectorColumn()==true!!!
+         */
+      bool convertVectorItem(size_t* usedVectorItem=nullptr);
+      /** \brief if the column's data is \u not stored in an internal vector item, this copies the data into a vector item
+         *       This does not copy all data, but only the inclusive row ranges [start1..end1] and [start2..end2].
+         *
+         *
+         *  \param start1 start of first range. If start1>getRows() or end1<start1 the range [start1..end1] is ignored.
+         *  \param end1 end of first range
+         *  \param start2 start of second range. If start2>getRows() or end2<start2 the range [start2..end2] is ignored.
+         *  \param end2 end of second range
+         *  \param[out] usedVectorItem optionally returns the ID of the JKQTPDatastoreItem that was generated or is used!
+         *  \return \c true if a conversion was performed, or false if the column already linked to a vector item.
+         *          In the latter case the ranges [start1..end1] and [start2..end2] are ignored (i.e. a vector column is not modified!!!)!!!
+         *          Especially this returns \c false if isVectorColumn()==true!!!
+         *
+         *  \note If start1==end1==getRows() and start2==end2==getRows() all data is copied.
+         *
+         */
+      bool convertVectorItemFromRanges(size_t start1, size_t end1, size_t start2, size_t end2, size_t* usedVectorItem=nullptr);
+      /** \brief if the column's data is \u not stored in an internal vector item, this copies the data into a vector item
+         *       This does not copy all data, but only the inclusive row range [start1..end1].
+         *
+         *
+         *  \param start1 start of first range.  If start1>getRows() or end1<start1 the range [start1..end1] is ignored. If start1==end1==getRows() all data is copied.
+         *  \param end1 end of first range
+         *  \param[out] usedVectorItem optionally returns the ID of the JKQTPDatastoreItem that was generated or is used!
+         *  \return \c true if a conversion was performed, or false if the column already linked to a vector item.
+         *          In the latter case the range [start1..end1] are ignored (i.e. a vector column is not modified!!!)!!!
+         *          Especially this returns \c false if isVectorColumn()==true!!!
+         *
+         *  \note If start1==end1==getRows() all data is copied.
+         */
+      bool convertVectorItemFromRange(size_t start1, size_t end1, size_t* usedVectorItem=nullptr);
+
 
 };
 
@@ -1694,6 +1775,7 @@ class JKQTPColumnIterator {
         inline JKQTPColumnIterator(JKQTPColumn* col, int startpos=0) : col_(col), pos_(startpos) {  }
     public:
         typedef JKQTPColumnIterator self_type;
+        typedef JKQTPColumnConstIterator const_variant_type;
         typedef double value_type;
         typedef double& reference;
         typedef const double& const_reference;
@@ -1931,6 +2013,7 @@ class JKQTPColumnIterator {
             if (!isValid()) return 0;
             return col_->getRows() / col_->getImageColumns();
         }
+
         friend class JKQTPColumnConstIterator;
         friend class JKQTPColumn;
         friend class JKQTPDatastore;
@@ -2008,6 +2091,7 @@ class JKQTPColumnConstIterator {
         inline JKQTPColumnConstIterator(const JKQTPColumn* col, int startpos=0) : col_(col), pos_(startpos) {  }
     public:
         typedef JKQTPColumnConstIterator self_type;
+        typedef JKQTPColumnIterator nonconst_variant_type;
         typedef double value_type;
         typedef const double& reference;
         typedef reference const_reference;
@@ -2018,8 +2102,8 @@ class JKQTPColumnConstIterator {
         inline JKQTPColumnConstIterator() : col_(nullptr), pos_(-1) {  }
         inline JKQTPColumnConstIterator(const JKQTPColumnConstIterator&)=default;
         inline JKQTPColumnConstIterator(JKQTPColumnConstIterator&&)=default;
-        inline JKQTPColumnConstIterator(const JKQTPColumnIterator& rhs): col_(rhs.col_), pos_(rhs.pos_) {}
-        inline JKQTPColumnConstIterator(JKQTPColumnIterator&& rhs):
+        inline JKQTPColumnConstIterator(const nonconst_variant_type& rhs): col_(rhs.col_), pos_(rhs.pos_) {}
+        inline JKQTPColumnConstIterator(nonconst_variant_type&& rhs):
             col_(std::move(rhs.col_)), pos_(std::move(rhs.pos_))
         {
             rhs.col_=nullptr;
@@ -2027,12 +2111,12 @@ class JKQTPColumnConstIterator {
         }
         inline JKQTPColumnConstIterator& operator=(const JKQTPColumnConstIterator&)=default;
         inline JKQTPColumnConstIterator& operator=(JKQTPColumnConstIterator&&)=default;
-        inline JKQTPColumnConstIterator& operator=(const JKQTPColumnIterator&rhs){
+        inline JKQTPColumnConstIterator& operator=(const nonconst_variant_type&rhs){
             col_=rhs.col_;
             pos_=rhs.pos_;
             return *this;
         }
-        inline JKQTPColumnConstIterator& operator=(JKQTPColumnIterator&&rhs){
+        inline JKQTPColumnConstIterator& operator=(nonconst_variant_type&&rhs){
             col_=rhs.col_;
             pos_=rhs.pos_;
             rhs.col_=nullptr;
@@ -2275,8 +2359,10 @@ class JKQTPColumnConstIterator {
         friend class JKQTPColumn;
         friend class JKQTPDatastore;
     protected:
+
         /** \brief returns the referenced column */
         inline const JKQTPColumn* getColumn() const { return col_; }
+
 };
 
 
@@ -2330,6 +2416,8 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
     JKQTPDatastoreItem(size_t columns, size_t rows);
     /** \brief class constructor: initializes the object for internal data storage with the given data */
     JKQTPDatastoreItem(const QVector<double> &data);
+    /** \brief class constructor: initializes the object for internal data storage with the given data */
+    JKQTPDatastoreItem(QVector<double> &&data);
     /** \brief class constructor: initializes the object for external data storage */
     JKQTPDatastoreItem(JKQTPDatastoreItemFormat dataformat, double* data, size_t columns, size_t rows);
     /** \brief class constructor: initializes the object for external data storage */
@@ -2343,6 +2431,7 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
     /** \copydoc JKQTPDatastoreItem::rows */
     inline size_t getRows() const
     {   return rows;   }
+
     /** \copydoc JKQTPDatastoreItem::columns */
     inline size_t getColumns() const
     {   return columns;   }
@@ -2352,33 +2441,53 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
         return dataformat==JKQTPDatastoreItemFormat::SingleColumn && storageType==StorageType::Vector;
     }
 
-    /** \brief if \c isValid() : resize the row to have \a rows_new rows */
-    inline void resize(size_t rows_new) {
+    /** \brief if \c isValid() : resizeVectorItem the row to have \a rows_new rows */
+    inline void resizeVectorItem(size_t rows_new) {
         JKQTPASSERT(isVector());
         datavec.resize(static_cast<int>(rows_new));
         rows=static_cast<size_t>(datavec.size());
         data=datavec.data();
     }
 
-    /** \brief if \c isValid() : erase the row \a row */
-    inline void erase(size_t row) {
-        JKQTPASSERT(isVector());
-        datavec.erase(datavec.begin()+row, datavec.end());
-        rows=static_cast<size_t>(datavec.size());
-        data=datavec.data();
+    /** \brief if \c isValid() : eraseFromVectorItem the row \a row
+     *
+     *  \warning This function only works if isVector() is \c true!!!
+     *           In other cases this operation might require a reallocation or change of memory
+     *           which cannot be performed within an item, but only on the level of columns or the datastore..
+     */
+    inline void eraseFromVectorItem(size_t row) {
+        eraseFromVectorItem(row, row);
     }
-    /** \brief if \c isValid() : erase all rows (and including) from  \a row to \a rowEnd */
-    inline void erase(size_t row, size_t rowEnd) {
-        if (row>rowEnd) erase(rowEnd, row);
-        else if (row==rowEnd) erase(row);
+
+    /** \brief if \c isValid() : eraseFromVectorItem all rows (and including) from  \a row to \a rowEnd
+     *
+     *  \param row first element to delete
+     *  \param rowEnd last element to delet (inclusive!), if \a rowEnd \c >= \c getRows() then everything until the end of the vector is delete, starting with \a row
+     *
+     *  \warning This function only works if isVector() is \c true!!!
+     *           In other cases this operation might require a reallocation or change of memory
+     *           which cannot be performed within an item, but only on the level of columns or the datastore.
+     */
+    inline void eraseFromVectorItem(size_t row, size_t rowEnd) {
+        if (row>rowEnd) eraseFromVectorItem(rowEnd, row);
         else {
             JKQTPASSERT(isVector());
+            JKQTPASSERT(row<datavec.size());
             if (rowEnd>=static_cast<size_t>(datavec.size())) datavec.erase(datavec.begin()+row, datavec.end());
             else datavec.erase(datavec.begin()+row, datavec.begin()+rowEnd);
             rows=static_cast<size_t>(datavec.size());
             data=datavec.data();
         }
     }
+
+    /** \brief reserves memory for the vector holding the data in this column
+     *
+     *  \warning This function only works if isVector() is \c true!!!
+     */
+    inline void reserveVectorColumn(size_t rows) {
+        if (!isVector()) datavec.reserve(std::max<size_t>(rows, datavec.size()));
+    }
+
     /** \brief returns the data at the position (\a column, \a row ).
      *
      * \note The column index specifies the column inside THIS item, not the global column number. */
@@ -2472,7 +2581,14 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
 
     /** \brief adds a new row to the given column. Returns \c true on success and \c false else
      *
-     * This operation is currently only possible, if \c storageType==StorageType::Vector ! */
+     * \param column the column inside this item to append to (has to be 0 at the moment!)
+     * \param value the value to append
+     * \return \c true on succes
+     *
+     * \warning This operation is currently only possible, if \c storageType==StorageType::Vector,
+     *          dataformat==JKQTPDatastoreItemFormat::SingleColumn and column==0 !
+     *          If any of these properties fail, the function returns \c false!
+     */
     inline bool push_back(size_t column, double value) {
         if (storageType==StorageType::Vector && dataformat==JKQTPDatastoreItemFormat::SingleColumn && column==0) {
             datavec.push_back(value);
@@ -2485,13 +2601,27 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
 
     /** \brief adds a new row to the given column. Returns \c true on success and \c false else
      *
-     * This operation is currently only possible, if \c storageType==StorageType::Vector ! */
+     * \param column the column inside this item to append to (has to be 0 at the moment!)
+     * \param value the value to append
+     * \return \c true on succes
+     *
+     * \warning This operation is currently only possible, if \c storageType==StorageType::Vector,
+     *          dataformat==JKQTPDatastoreItemFormat::SingleColumn and column==0 !
+     *          If any of these properties fail, the function returns \c false!
+     */
     inline bool append(size_t column, double value) {
         return push_back(column, value);
     }
     /** \brief adds new rows to the given column. Returns \c true on success and \c false else
      *
-     * This operation is currently only possible, if \c storageType==StorageType::Vector ! */
+     * \param column the column inside this item to append to (has to be 0 at the moment!)
+     * \param values the values to append
+     * \return \c true on succes
+     *
+     * \warning This operation is currently only possible, if \c storageType==StorageType::Vector,
+     *          dataformat==JKQTPDatastoreItemFormat::SingleColumn and column==0 !
+     *          If any of these properties fail, the function returns \c false!
+     */
     inline bool append(size_t column, const QVector<double>& values) {
         if (storageType==StorageType::Vector && dataformat==JKQTPDatastoreItemFormat::SingleColumn && column==0) {
             datavec.reserve(datavec.size()+values.size());
@@ -2504,7 +2634,14 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastoreItem {
     }
     /** \brief adds new rows to the given column. Returns \c true on success and \c false else
      *
-     * This operation is currently only possible, if \c storageType==StorageType::Vector ! */
+     * \param column the column inside this item to append to (has to be 0 at the moment!)
+     * \param values the values to append
+     * \return \c true on succes
+     *
+     * \warning This operation is currently only possible, if \c storageType==StorageType::Vector,
+     *          dataformat==JKQTPDatastoreItemFormat::SingleColumn and column==0 !
+     *          If any of these properties fail, the function returns \c false!
+     */
     inline bool append(size_t column, const std::vector<double>& values) {
         if (storageType==StorageType::Vector && dataformat==JKQTPDatastoreItemFormat::SingleColumn && column==0) {
             datavec.reserve(static_cast<int>(datavec.size())+static_cast<int>(values.size()));
@@ -2592,13 +2729,13 @@ JKQTPColumn::const_iterator JKQTPColumn::end() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPColumn::erase(size_t row) {
-    datastore->getItem(datastoreItem)->erase(row);
+void JKQTPColumn::eraseFromVectorColumn(size_t row) {
+    datastore->getItem(datastoreItem)->eraseFromVectorItem(row);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPColumn::erase(size_t row, size_t rowEnd) {
-    datastore->getItem(datastoreItem)->erase(row, rowEnd);
+void JKQTPColumn::eraseFromVectorColumn(size_t row, size_t rowEnd) {
+    datastore->getItem(datastoreItem)->eraseFromVectorItem(row, rowEnd);
 }
 
 
@@ -2723,73 +2860,6 @@ inline void JKQTPDatastore::appendToColumn(size_t column, TIterator first, TIter
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
-
-
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        } else {
-            columns[itc].erase(static_cast<size_t>(pos.getPosition()));
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos; ++it) old_data.push_back(*it);
-
-
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        } else {
-            columns[itc].erase(static_cast<size_t>(pos.getPosition()));
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnIterator &pos, const JKQTPColumnIterator &posEnd) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        }
-        if (posEnd.isValid()) columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
-        else columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-void JKQTPDatastore::eraseFromColumn(const JKQTPColumnConstIterator &pos, const JKQTPColumnConstIterator &posEnd) {
-    if (pos.isValid()) {
-        bool ok=pos.getColumn()->getDatastoreItem()->isVector();
-        auto itc=columns.key(*pos.getColumn());
-        if (!ok) {
-            QVector<double> old_data;
-            for (auto it=pos.getColumn()->begin(); it!=pos.getColumn()->end(); ++it) old_data.push_back(*it);
-            size_t itemID=addItem(new JKQTPDatastoreItem(old_data));
-            columns[itc].replaceMemory(itemID, 0);
-        }
-        if (posEnd.isValid()) columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(posEnd.getPosition()));
-        else columns[itc].erase(static_cast<size_t>(pos.getPosition()), static_cast<size_t>(pos.getPosition())+columns[itc].getRows()+1);
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 inline double JKQTPDatastore::getPixel(size_t column, size_t x, size_t y) const {
@@ -2852,11 +2922,10 @@ size_t JKQTPDatastore::addCopiedImageAsColumnTranspose(const T* data, size_t wid
         for (size_t y=0; y<height; y++) {
             temp[x*height+y]=jkqtp_todouble<T>(data[start+(y*width+x)*stride]);
         }
-
     }
 
     size_t idx=addInternalColumn(temp, width*height, name);
-    columns[idx].setImageColumns(height);
+    columns[idx].setImageColumns(width);
     return idx;
 }
 

@@ -64,6 +64,14 @@ jobs:
             fetch_content: false
             generator: Visual Studio 17 2022
 
+          - os: windows-2022
+            qt_ver: 6.7
+            compiler: msvc
+            build_type: Release
+            cxx20: ON
+            fetch_content: false
+            generator: Visual Studio 17 2022
+
           # macOS
           #- os: macos-15
           #  qt_ver: 6.7
@@ -162,6 +170,15 @@ jobs:
           echo "CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
         shell: bash        
 
+      - name: set QT_QPA_PLATFORM (Linux/macOS)
+        if: "!startsWith(matrix.os, 'windows')"
+        run: |
+          echo "previous:   QT_QPA_PLATFORM='$QT_QPA_PLATFORM'"
+          export QT_QPA_PLATFORM=offscreen
+          echo "QT_QPA_PLATFORM=$QT_QPA_PLATFORM" >> $GITHUB_ENV
+          echo "now:        QT_QPA_PLATFORM='$QT_QPA_PLATFORM'"
+        shell: bash
+
       # Build main CMake project only if not fetch_content
       - name: Configure (CMake)
         if: env.FETCHCONTENT == 'false'
@@ -169,7 +186,8 @@ jobs:
           mkdir build
           cd build
           cmake --version
-          cmake -G "${{ env.GENERATOR }}" "-DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}" "-DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}" "-DCMAKE_INSTALL_PREFIX=../install" "-DJKQtPlotter_ENABLED_CXX20=${{ env.USE_CXX20 }}" ..
+          echo "now:        QT_QPA_PLATFORM='$QT_QPA_PLATFORM'"
+          cmake -G "${{ env.GENERATOR }}" "-DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}" "-DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH }}" "-DCMAKE_INSTALL_PREFIX=../install" "-DJKQtPlotter_ENABLED_CXX20=${{ env.USE_CXX20 }}"  ..
         shell: bash
               
               
@@ -187,12 +205,13 @@ jobs:
           cd build
           cmake --install . --config "${{ env.BUILD_TYPE }}"
         shell: bash
-
+          
       - name: Run tests (CTest)
         if: env.FETCHCONTENT == 'false'
         run: |
           cd build
-          ctest --output-on-failure --build-config ${{ env.BUILD_TYPE }} --output-junit ./test-results-${{ env.UNIQUE_RESULTS_ID }}.xml
+          echo "now:        QT_QPA_PLATFORM='$QT_QPA_PLATFORM'"
+          ctest --output-on-failure --extra-verbose --debug --build-config ${{ env.BUILD_TYPE }} --output-junit ./test-results-${{ env.UNIQUE_RESULTS_ID }}.xml
           ls -lR *.xml
         shell: bash
 
