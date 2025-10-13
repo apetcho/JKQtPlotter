@@ -721,6 +721,7 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          *  \see \ref JKQTPlotterBasicJKQTPDatastore
          */
         size_t addColumn(double* data, size_t rows, const QString& name=QString(""));
+
         /** \brief add a column with \a rows entries from the array \a data,
          *         ownership of the memory behind \a data is transfered to the datastore
          *
@@ -742,6 +743,38 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
          */
         size_t addInternalColumn(double *data, size_t rows, const QString& name);
 
+        /** \brief add a column with data from \a data,
+         *         ownership of the memory behind \a data is transfered to the datastore
+         *
+         *   \param data data array to be moved into the datastore
+         *   \param name name for the column
+         *   \return the ID of the newly created column
+         *
+         *  \see \ref JKQTPlotterBasicJKQTPDatastore
+         */
+        size_t addInternalColumn(QVector<double>&& data, const QString& name);
+
+        /** \brief add a column with data from \a data,
+         *         ownership of the memory behind \a data is transfered to the datastore
+         *
+         *   \param data data array to be moved into the datastore
+         *   \param name name for the column
+         *   \return the ID of the newly created column
+         *
+         *  \see \ref JKQTPlotterBasicJKQTPDatastore
+         */
+        inline size_t addColumn(QVector<double>&& data, const QString& name) { return addInternalColumn(std::move(data), name); }
+
+        /** \brief add a column with data from \a data,
+         *         ownership of the memory behind \a data is transfered to the datastore
+         *
+         *   \param data data array to be moved into the datastore
+         *   \param name name for the column
+         *   \return the ID of the newly created column
+         *
+         *  \see \ref JKQTPlotterBasicJKQTPDatastore
+         */
+        inline size_t addCopiedColumn(QVector<double>&& data, const QString& name) { return addInternalColumn(std::move(data), name); }
 
         /** \brief add a new columns with \a width * \a height rows to the datastore and return its column ID. The new item uses internal memory management.
          *         The column is meant to represent an image in row-major order with x-dimention \a width and y-dimension \a height .
@@ -1152,17 +1185,18 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
             auto itdata=std::begin(data);
             auto itdataend=std::end(data);
             const size_t N=std::min<size_t>(std::distance(itmask,itmaskend),std::distance(itdata,itdataend));
-            double* d=static_cast<double*>(malloc(static_cast<size_t>(N)*sizeof(double)));
+            QVector<double> d;
+            d.reserve(N);
             size_t rrs=0;
             for (size_t r=0; r<N; r++) {
                 if (static_cast<bool>(*itmask)==useIfMaskEquals) {
-                    d[rrs]=jkqtp_todouble(*itdata);
+                    d.push_back(jkqtp_todouble(*itdata));
                     rrs++;
                 }
                 ++itmask;
                 ++itdata;
             }
-            size_t col= addInternalColumn(d, rrs, name);
+            size_t col= addInternalColumn(std::move(d), name);
             return col;
 
         }
@@ -1194,16 +1228,15 @@ class JKQTPLOTTER_LIB_EXPORT JKQTPDatastore{
        template <typename TIterator>
         std::pair<size_t, size_t> addCopiedMap(TIterator first, TIterator last, const QString& nameKey=QString("map_key"), const QString& nameValue=QString("map_value")) {
             const size_t N=static_cast<size_t>(std::abs(std::distance(first,last)));
-            double* xvals=static_cast<double*>(malloc(N*sizeof(double)));
-            double* yvals=static_cast<double*>(malloc(N*sizeof(double)));
+            QVector<double> xvals(N), yvals(N);
             size_t i=0;
             for (auto it=first; it!=last; ++it) {
                 xvals[i]=(jkqtp_todouble(it->first));
                 yvals[i]=(jkqtp_todouble(it->second));
                 i++;
             }
-            const size_t cx=addInternalColumn(xvals, N, nameKey);
-            const size_t cy=addInternalColumn(yvals, N, nameValue);
+            const size_t cx=addInternalColumn(std::move(xvals), nameKey);
+            const size_t cy=addInternalColumn(std::move(yvals), nameValue);
             return std::pair<size_t, size_t>(cx,cy);
         }
 

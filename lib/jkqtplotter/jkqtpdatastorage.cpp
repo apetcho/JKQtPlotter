@@ -599,7 +599,7 @@ size_t JKQTPDatastore::addItem(size_t columnsnum, size_t rows) {
     return addItem(new JKQTPDatastoreItem(columnsnum, rows));
 };
 
-/** \brief add one external column to the datastore. It contains \a rows rows.*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addItem(double* data, size_t rows) {
     /*items.push_back(new JKQTPDatastoreItem(JKQTPSingleColumn, data, 1, rows));
     return items.size()-1;*/
@@ -659,6 +659,13 @@ size_t JKQTPDatastore::addColumn(double* data, size_t rows, const QString& name)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addInternalColumn(double* data, size_t rows, const QString& name) {
     size_t it=addItem(new JKQTPDatastoreItem(JKQTPDatastoreItemFormat::SingleColumn, data, 1, rows,true));
+    return addColumnForItem(it, 0, name);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+size_t JKQTPDatastore::addInternalColumn(QVector<double> &&data, const QString &name)
+{
+    size_t it=addItem(new JKQTPDatastoreItem(std::move(data)));
     return addColumnForItem(it, 0, name);
 }
 
@@ -852,42 +859,37 @@ std::pair<size_t, size_t> JKQTPDatastore::addCopiedPoints(const QVector<QPointF>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addLinearColumn(size_t rows, double start, double end, const QString& name) {
-    double delta=(end-start)/static_cast<double>(rows-1);
-    JKQTPDatastoreItem* it=new JKQTPDatastoreItem(1, rows);
+    const double delta=(end-start)/static_cast<double>(rows-1);
+    QVector<double> d(rows);
     for (size_t i=0; i<rows; i++) {
-        it->set(0, i, start+static_cast<double>(i) * delta);
+        d[i]= start+static_cast<double>(i) * delta;
          //std::cout<<"copy@"<<i<<" = "<<data[i]<<std::endl;
     }
-    /*items.push_back(it);
-    size_t itemid=items.size()-1;*/
-    size_t itemid= addItem(it);
-    return addColumnForItem(itemid, 0, name);
+    return addInternalColumn(std::move(d),name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addLogColumn(size_t rows, double start, double end, const QString &name)
 {
-    JKQTPDatastoreItem* it=new JKQTPDatastoreItem(1, rows);
     const double x0=log(start)/JKQTPSTATISTICS_LN10;
     const double x1=log(end)/JKQTPSTATISTICS_LN10;
+    QVector<double> d(rows);
     for (size_t i=0; i<rows; i++) {
-        it->set(0, i, pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0)));
+        d[i]= pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0));
     }
-    size_t itemid= addItem(it);
-    return addColumnForItem(itemid, 0, name);
+    return addInternalColumn(std::move(d),name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 size_t JKQTPDatastore::addDecadeLogColumn(size_t rows, double startDecade, double endDecade, const QString &name)
 {
-    JKQTPDatastoreItem* it=new JKQTPDatastoreItem(1, rows);
     const double x0=startDecade;
     const double x1=endDecade;
+    QVector<double> d(rows);
     for (size_t i=0; i<rows; i++) {
-        it->set(0, i, pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0)));
+        d[i]= pow(10.0, x0+static_cast<double>(i)/static_cast<double>(rows-1)*(x1-x0));
     }
-    size_t itemid= addItem(it);
-    return addColumnForItem(itemid, 0, name);
+    return addInternalColumn(std::move(d),name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -977,8 +979,9 @@ size_t JKQTPDatastore::addCalculatedColumnFromColumn(size_t otherColumnX, size_t
 ////////////////////////////////////////////////////////////////////////////////////////////////
 QVector<int> JKQTPDatastore::getColumnIDsIntVec() const {
     QVector<int> ks;
-    for (const size_t& k: columns.keys()) {
-        ks<<static_cast<int>(k);
+    const auto keys=columns.keys();
+    for (auto it=keys.begin(); it!=keys.end(); ++it) {
+        ks<<static_cast<int>(*it);
     }
     return ks;
 }
